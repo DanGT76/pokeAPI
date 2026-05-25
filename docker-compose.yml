@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: pokemon_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pokemon_user
+      POSTGRES_PASSWORD: pokemon_pass
+      POSTGRES_DB: pokemon_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pokemon_user -d pokemon_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: pokemon_api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://pokemon_user:pokemon_pass@db:5432/pokemon_db
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app   # hot-reload in development
+
+volumes:
+  postgres_data:
